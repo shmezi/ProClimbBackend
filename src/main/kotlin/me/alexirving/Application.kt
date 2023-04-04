@@ -1,73 +1,47 @@
 package me.alexirving
 
 import io.ktor.server.application.*
-import io.ktor.server.auth.*
 import io.ktor.server.netty.*
-import io.ktor.server.response.*
-import io.ktor.server.sessions.*
-import io.ktor.util.*
-import kotlinx.coroutines.runBlocking
+import me.alexirving.api.api
 import me.alexirving.lib.database.nosql.MongoConnection
 import me.alexirving.lib.database.nosql.MongoDbCachedCollection
-import me.alexirving.structs.Cookie
-import me.alexirving.structs.RawCookie
+import me.alexirving.login.Cookie
+import me.alexirving.login.loginPage
 import me.alexirving.structs.Routine
-import me.alexirving.structs.User
+import me.alexirving.structs.user.Account
+import me.alexirving.structs.user.Board
+import me.alexirving.structs.user.User
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder
 
 
 private val connection = MongoConnection("mongodb://localhost", "HangboardPro")
 
-val users = MongoDbCachedCollection("Users", User::class.java, connection).getManager {
-    User(it, "", listOf())
-}
-val routines = MongoDbCachedCollection("Routines", Routine::class.java, connection).getManager {
-    Routine(it, 0, 7000, 120000)
+val encoder: Argon2PasswordEncoder = Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8()
+
+val users = MongoDbCachedCollection("Users", User::class.java, connection).getManager { id, type, params ->
+    when (type) {
+        "account" -> Account(id, params["password"] as String)
+        "board" -> Board(id, params["password"] as String)
+        else -> throw Exception("Account type does not exist!")
+    }
+
 }
 
-val cookies = MongoDbCachedCollection("Cookies", Cookie::class.java, connection).getManager {
-    Cookie(it, mutableListOf())
+val routines = MongoDbCachedCollection("Routines", Routine::class.java, connection).getManager { id, type, params ->
+    Routine(id, 0, 7000, 120000)
+}
+
+val cookies = MongoDbCachedCollection("Cookies", Cookie::class.java, connection).getManager { id, type, params ->
+    Cookie(id, mutableMapOf())
 }
 
 
 fun main(args: Array<String>): Unit = EngineMain.main(args)
 
 
-suspend fun bakeCookie(id: String): String {
-    val freshCookie = randomString(32)
-    cookies.getOrCreate(id).cookies.add(freshCookie)
-    return freshCookie
-}
-
 fun Application.module() {
-
-
-    runBlocking {
-        users.getOrCreate("shmezi").setPwd("12345678")
-    }
-    install(Authentication) {
-        session<RawCookie> {
-            validate { session ->
-                if (cookies.getOrCreate(session.id).cookies.contains(session.cookie)) {
-                    session
-                } else {
-                    null
-                }
-            }
-            challenge {
-                call.respondRedirect("/login")
-            }
-        }
-    }
-
-
-    install(Sessions) {
-        cookie<RawCookie>("user_session") {
-            cookie.path = "/"
-            val secretEncryptKey = hex("5230f3361b81f5f0c47b04d1c221a85c")
-            val secretAuthKey = hex("4bcc8845033da7c215f6bad06aa48cde")
-            transform(SessionTransportTransformerEncrypt(secretEncryptKey, secretAuthKey))
-        }
-    }
+    loginPage()
+    api()
     configureRouting()
 
 }

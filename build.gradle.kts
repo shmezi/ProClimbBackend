@@ -27,7 +27,7 @@ dependencies {
     implementation("org.springframework.security:spring-security-crypto:6.0.2")
     implementation("commons-logging:commons-logging:1.2")
     implementation("org.bouncycastle:bcpkix-jdk15on:1.70")
-    implementation("AlexLib:database:3.3")
+    implementation("AlexLib:database:3.4.3.5")
     implementation("AlexLib:utilities:3.1")
 
     implementation("io.ktor:ktor-server-html-builder:$ktorVersion")

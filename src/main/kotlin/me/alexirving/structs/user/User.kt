@@ -1,23 +1,24 @@
-package me.alexirving.structs
+package me.alexirving.structs.user
 
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonSubTypes.Type
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import io.ktor.server.auth.*
 import kotlinx.coroutines.runBlocking
+import me.alexirving.encoder
 import me.alexirving.lib.database.core.Cacheable
 import me.alexirving.users
-import org.springframework.security.crypto.argon2.Argon2PasswordEncoder
 
 
-private val encoder: Argon2PasswordEncoder = Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8()
-
-class User(identifier: String, private var pwd: String, log: List<UserLog>) : Cacheable<String>(identifier), Principal {
-    fun setPwd(newPassword: String) {
+abstract class User(identifier: String, var pwd: String) : Cacheable<String>(identifier), Principal {
+    fun setPassword(newPassword: String) {
         pwd = encoder.encode(newPassword)
     }
 
     fun check(toCheck: String) = encoder.matches(toCheck, pwd)
 
     companion object {
-        fun encode(id: String, pwd: String) = User(id, encoder.encode(pwd), listOf())
+
 
         /**
          * Checks if a password is correct based on the encoded password
