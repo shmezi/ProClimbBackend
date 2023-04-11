@@ -1,5 +1,13 @@
 package me.alexirving.structs.user
 
-import com.fasterxml.jackson.annotation.JsonTypeName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import me.alexirving.structs.UserLog
 
-class Account(identifier: String, pwd: String) : User(identifier, pwd)
+@Serializable
+@SerialName("account")
+class Account(
+    override val identifier: String,
+    override var pwd: String,
+    val logs: MutableList<UserLog>
+) : User()

@@ -1,6 +1,5 @@
 package me.alexirving.login
 
-import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.html.*
@@ -11,7 +10,6 @@ import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import io.ktor.util.*
 import kotlinx.html.*
-import me.alexirving.cookies
 import me.alexirving.randomString
 import me.alexirving.structs.user.Account
 import me.alexirving.structs.user.Board
@@ -19,6 +17,7 @@ import me.alexirving.structs.user.User
 import me.alexirving.users
 import java.time.Instant
 import java.util.*
+import kotlin.collections.set
 
 
 fun bakeCookie() = randomString(32)
@@ -26,18 +25,44 @@ fun Application.loginPage() {
     install(Authentication) {
         session<RawCookie> {
             validate { session ->
-                if (cookies.getIfInDb(session.id)?.isSession(session.cookie) == true) {
-                    session
-                } else {
-                    this.sessions.clear<RawCookie>()
-                    null
+                val user = users.getIfInDb(session.id)
+                user?.isSession(session.cookie)?.apply {
+                    if (user is Account)
+                        return@validate user
                 }
+                this.sessions.clear<RawCookie>()
+                null
             }
             challenge {
                 call.respondRedirect("/user/login")
             }
         }
+        session<RawCookie>("board") {
+            validate { session ->
+                val user = users.getIfInDb(session.id)
+                user?.isSession(session.cookie)?.apply {
+                    if (user is Board)
+                        return@validate user
+                }
+                this.sessions.clear<RawCookie>()
+                null
+            }
+            challenge {
+                call.respondRedirect("/user/login")
+            }
+        }
+        session<RawCookie>() {
+            validate { session ->
+
+
+            }
+        }
     }
+
+
+
+
+
 
 
     install(Sessions) {
@@ -109,19 +134,17 @@ fun Application.loginPage() {
 
                     if (user.check(password)) {
                         val cookie = bakeCookie()
-                        cookies.getOrCreate(user.identifier, "account") {
+                        users.getOrCreate(user.identifier, "account") {
                             addSession(
                                 cookie,
-                                SessionData(Date.from(Instant.now()), call.request.origin.remoteAddress)
+                                SessionData(Date.from(Instant.now()).toString(), call.request.origin.remoteAddress)
                             )
                         }
                         call.sessions.set(RawCookie(user.identifier, cookie))
                         call.respondRedirect("/home")
-                        call.respond(HttpStatusCode.OK)
                     } else {
                         call.respond("Incorrect password!")
 
-                        call.respond(HttpStatusCode.NotAcceptable)
                     }
 
                 }
@@ -129,7 +152,7 @@ fun Application.loginPage() {
             }
             get("/logout") {
                 val session = call.sessions.get<RawCookie>() ?: return@get
-                cookies.getOrCreate(session.id, "account") {
+                users.getOrCreate(session.id, "account") {
                     sessions?.remove(session.cookie)
                 }
                 call.sessions.clear<RawCookie>()
@@ -199,8 +222,11 @@ fun Application.loginPage() {
                         call.respond("No username provided!")
                         return@post
                     }
-
-
+                    val type = params["type"]
+                    if (type == null) {
+                        call.respond("No type provided!")
+                        return@post
+                    }
                     if (users.getIfInDb(username) != null) {
                         call.respond("Username already exists!")
                         return@post
@@ -208,18 +234,18 @@ fun Application.loginPage() {
                     } else {
                         users.getOrCreate(
                             username,
-                            "account",
+                            type,
                             mutableMapOf<String, Any>().apply { this["password"] = passwordA }) {
                             setPassword(passwordA)
                         }
                         val cookie = bakeCookie()
-                        cookies.getOrCreate(
+                        users.getOrCreate(
                             username,
                             "account",
                             mutableMapOf<String, Any>().apply { this["password"] = passwordA }) {
                             addSession(
                                 cookie,
-                                SessionData(Date.from(Instant.now()), call.request.origin.remoteAddress)
+                                SessionData(Date.from(Instant.now()).toString(), call.request.origin.remoteAddress)
                             )
                         }
                         call.sessions.set(RawCookie(username, cookie))
@@ -234,8 +260,7 @@ fun Application.loginPage() {
             get {
 
                 val user = users.getIfInDb(call.sessions.get<RawCookie>()?.id ?: "Not found")
-                val cookie = cookies.getIfInDb(call.sessions.get<RawCookie>()?.id ?: "Not found")
-                if (user == null || cookie == null) {
+                if (user == null) {
                     call.respond("User was not found!")
                     return@get
                 }
@@ -247,7 +272,6 @@ fun Application.loginPage() {
                             return when (u) {
                                 is Account -> "Account"
                                 is Board -> "Board"
-                                else -> "Unknown"
                             }
                         }
 
@@ -261,7 +285,7 @@ fun Application.loginPage() {
                             +"Logged in sessions:"
                         }
                         ul {
-                            for (x in cookie.sessions?.values ?: return@ul) {
+                            for (x in user.sessions.values) {
                                 li {
 
                                     +"Date: ${x.date}| Ip: ${x.ip}"

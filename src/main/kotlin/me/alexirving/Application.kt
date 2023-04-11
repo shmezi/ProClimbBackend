@@ -5,7 +5,6 @@ import io.ktor.server.netty.*
 import me.alexirving.api.api
 import me.alexirving.lib.database.nosql.MongoConnection
 import me.alexirving.lib.database.nosql.MongoDbCachedCollection
-import me.alexirving.login.Cookie
 import me.alexirving.login.loginPage
 import me.alexirving.structs.Routine
 import me.alexirving.structs.user.Account
@@ -20,7 +19,7 @@ val encoder: Argon2PasswordEncoder = Argon2PasswordEncoder.defaultsForSpringSecu
 
 val users = MongoDbCachedCollection("Users", User::class.java, connection).getManager { id, type, params ->
     when (type) {
-        "account" -> Account(id, params["password"] as String)
+        "account" -> Account(id, params["password"] as String, mutableListOf())
         "board" -> Board(id, params["password"] as String)
         else -> throw Exception("Account type does not exist!")
     }
@@ -29,10 +28,6 @@ val users = MongoDbCachedCollection("Users", User::class.java, connection).getMa
 
 val routines = MongoDbCachedCollection("Routines", Routine::class.java, connection).getManager { id, type, params ->
     Routine(id, 0, 7000, 120000)
-}
-
-val cookies = MongoDbCachedCollection("Cookies", Cookie::class.java, connection).getManager { id, type, params ->
-    Cookie(id, mutableMapOf())
 }
 
 

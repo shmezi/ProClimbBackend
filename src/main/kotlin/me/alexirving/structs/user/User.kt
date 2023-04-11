@@ -1,37 +1,27 @@
 package me.alexirving.structs.user
 
-import com.fasterxml.jackson.annotation.JsonSubTypes
-import com.fasterxml.jackson.annotation.JsonSubTypes.Type
-import com.fasterxml.jackson.annotation.JsonTypeInfo
 import io.ktor.server.auth.*
-import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.Serializable
 import me.alexirving.encoder
 import me.alexirving.lib.database.core.Cacheable
-import me.alexirving.users
+import me.alexirving.login.SessionData
 
-
-abstract class User(identifier: String, var pwd: String) : Cacheable<String>(identifier), Principal {
+@Serializable
+sealed class User : Cacheable<String>, Principal {
+    abstract var pwd: String
+    val sessions = mutableMapOf<String, SessionData>()
     fun setPassword(newPassword: String) {
         pwd = encoder.encode(newPassword)
     }
 
     fun check(toCheck: String) = encoder.matches(toCheck, pwd)
 
-    companion object {
-
-
-        /**
-         * Checks if a password is correct based on the encoded password
-         */
-        fun check(toCheck: String, real: String) = encoder.matches(toCheck, real)
-
-        /**
-         * Checks if a password is the correct password for a user.
-         */
-        fun checkUser(user: String, pwd: String) = runBlocking {
-            check(pwd, users.getIfInDb(user)?.pwd ?: return@runBlocking false)
-        }
-
+    fun addSession(cookie: String, data: SessionData) {
+        sessions[cookie] = data
     }
+
+    fun removeSession(cookie: String) = sessions.remove(cookie) ?: false
+
+    fun isSession(cookie: String) = sessions.keys.contains(cookie)
 
 }
