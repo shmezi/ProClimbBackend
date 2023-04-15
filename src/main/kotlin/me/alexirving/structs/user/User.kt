@@ -9,7 +9,7 @@ import me.alexirving.login.SessionData
 @Serializable
 sealed class User : Cacheable<String>, Principal {
     abstract var pwd: String
-    val sessions = mutableMapOf<String, SessionData>()
+     val sessions = mutableMapOf<String, SessionData>()
     fun setPassword(newPassword: String) {
         pwd = encoder.encode(newPassword)
     }
@@ -20,6 +20,8 @@ sealed class User : Cacheable<String>, Principal {
         sessions[cookie] = data
     }
 
+    fun clearSessions() = sessions.clear()
+    fun singleSession(cookie:String,data:SessionData){clearSessions(); addSession(cookie,data)}
     fun removeSession(cookie: String) = sessions.remove(cookie) ?: false
 
     fun isSession(cookie: String) = sessions.keys.contains(cookie)

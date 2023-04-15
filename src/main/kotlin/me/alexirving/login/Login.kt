@@ -1,5 +1,6 @@
 package me.alexirving.login
 
+import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.html.*
@@ -10,6 +11,8 @@ import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import io.ktor.util.*
 import kotlinx.html.*
+import me.alexirving.api.validateUser
+import me.alexirving.lib.util.pq
 import me.alexirving.randomString
 import me.alexirving.structs.user.Account
 import me.alexirving.structs.user.Board
@@ -23,39 +26,53 @@ import kotlin.collections.set
 fun bakeCookie() = randomString(32)
 fun Application.loginPage() {
     install(Authentication) {
-        session<RawCookie> {
+        session<CookiePrincipal>("account") {
             validate { session ->
                 val user = users.getIfInDb(session.id)
                 user?.isSession(session.cookie)?.apply {
                     if (user is Account)
                         return@validate user
-                }
-                this.sessions.clear<RawCookie>()
-                null
+                }.pq("Was3?")
+                null.pq("Was14?")
             }
             challenge {
-                call.respondRedirect("/user/login")
+                call.respond(HttpStatusCode.Forbidden, "Please login at /user/login")
+//                call.respondRedirect("/user/login")
             }
         }
-        session<RawCookie>("board") {
+        session<CookiePrincipal>("board") {
             validate { session ->
                 val user = users.getIfInDb(session.id)
                 user?.isSession(session.cookie)?.apply {
                     if (user is Board)
                         return@validate user
                 }
-                this.sessions.clear<RawCookie>()
                 null
             }
             challenge {
-                call.respondRedirect("/user/login")
+                call.respond(HttpStatusCode.Forbidden, "Please login at /user/login")
             }
         }
-        session<RawCookie>() {
-            validate { session ->
-
-
+        basic("board-api") {
+            validate { credentials ->
+                users.getIfInDb(credentials.name)?.apply {
+                    if (this !is Board)
+                        return@validate null
+                    if (check(credentials.password)) {
+                        return@validate this
+                    } else
+                        return@validate null
+                }
+                null
             }
+        }
+
+
+        session<BoardSessionPrinciple>("session") {
+            validate { session ->
+                validateUser(session.code)
+            }
+            challenge("/control/auth")
         }
     }
 
@@ -66,10 +83,16 @@ fun Application.loginPage() {
 
 
     install(Sessions) {
-        cookie<RawCookie>("user_session") {
+        cookie<CookiePrincipal>("user_session") {
             cookie.path = "/"
             val secretEncryptKey = hex("5230f3361b81f5f0c47b04d1c221a85c")
             val secretAuthKey = hex("4bcc8845033da7c215f6bad06aa48cde")
+            transform(SessionTransportTransformerEncrypt(secretEncryptKey, secretAuthKey))
+        }
+        cookie<BoardSessionPrinciple>("user-board_session") {
+            cookie.path = "/"
+            val secretEncryptKey = hex("4bcc8845033da7c215f6bad06aa48cde")
+            val secretAuthKey = hex("5230f3361b81f5f0c47b04d1c221a85c")
             transform(SessionTransportTransformerEncrypt(secretEncryptKey, secretAuthKey))
         }
     }
@@ -77,10 +100,10 @@ fun Application.loginPage() {
 
     routing {
 
-        route("user") {
+        route("/user") {
             route("login") {
                 get {
-                    if (call.sessions.get<RawCookie>()?.cookie != null) {
+                    if (call.sessions.get<CookiePrincipal>()?.cookie != null) {
                         call.respondRedirect("/home")
                         return@get
                     }
@@ -134,14 +157,20 @@ fun Application.loginPage() {
 
                     if (user.check(password)) {
                         val cookie = bakeCookie()
-                        users.getOrCreate(user.identifier, "account") {
-                            addSession(
+                        if (user is Account)
+                            users.getIfInDb(user.identifier)?.addSession(
                                 cookie,
                                 SessionData(Date.from(Instant.now()).toString(), call.request.origin.remoteAddress)
                             )
-                        }
-                        call.sessions.set(RawCookie(user.identifier, cookie))
-                        call.respondRedirect("/home")
+                        else
+                            users.getIfInDb(user.identifier)?.singleSession(
+                                cookie,
+                                SessionData(Date.from(Instant.now()).toString(), call.request.origin.remoteAddress)
+                            )
+                        users.update(user.identifier)
+
+                        call.sessions.set(CookiePrincipal(user.identifier, cookie))
+                        call.respond(HttpStatusCode.Accepted)
                     } else {
                         call.respond("Incorrect password!")
 
@@ -151,11 +180,9 @@ fun Application.loginPage() {
 
             }
             get("/logout") {
-                val session = call.sessions.get<RawCookie>() ?: return@get
-                users.getOrCreate(session.id, "account") {
-                    sessions?.remove(session.cookie)
-                }
-                call.sessions.clear<RawCookie>()
+                val session = call.sessions.get<CookiePrincipal>() ?: return@get
+                users.getIfInDb(session.id)?.removeSession(session.cookie)
+                call.sessions.clear<CookiePrincipal>()
                 call.respondRedirect("/home")
             }
 
@@ -248,7 +275,7 @@ fun Application.loginPage() {
                                 SessionData(Date.from(Instant.now()).toString(), call.request.origin.remoteAddress)
                             )
                         }
-                        call.sessions.set(RawCookie(username, cookie))
+                        call.sessions.set(CookiePrincipal(username, cookie))
                         call.respondRedirect("/home")
                     }
 
@@ -256,41 +283,44 @@ fun Application.loginPage() {
 
 
             }
+            authenticate("board", "account", strategy = AuthenticationStrategy.FirstSuccessful) {
+                get {
 
-            get {
-
-                val user = users.getIfInDb(call.sessions.get<RawCookie>()?.id ?: "Not found")
-                if (user == null) {
-                    call.respond("User was not found!")
-                    return@get
-                }
-                call.respondHtml {
-                    body {
-                        h1 { +"Account info:" }
-                        p { +"Username: ${user.identifier}" }
-                        fun type(u: User): String {
-                            return when (u) {
-                                is Account -> "Account"
-                                is Board -> "Board"
-                            }
-                        }
-
-                        p { +"Account type: ${type(user)}" }
-                        a {
-                            href = "/user/logout"
-                            +"Sign out"
-
-                        }
-                        h2 {
-                            +"Logged in sessions:"
-                        }
-                        ul {
-                            for (x in user.sessions.values) {
-                                li {
-
-                                    +"Date: ${x.date}| Ip: ${x.ip}"
+                    val user = users.getIfInDb(call.sessions.get<CookiePrincipal>()?.id ?: "Not found")
+                    if (user == null) {
+                        call.respond("User was not found!")
+                        return@get
+                    }
+                    call.respondHtml {
+                        body {
+                            h1 { +"Account info:" }
+                            p { +"Username: ${user.identifier}" }
+                            fun type(u: User): String {
+                                return when (u) {
+                                    is Account -> "Account"
+                                    is Board -> "Board"
                                 }
                             }
+
+                            p { +"Account type: ${type(user)}" }
+                            a {
+                                href = "/user/logout"
+                                +"Sign out"
+
+                            }
+                            h2 {
+                                +"Logged in sessions:"
+                            }
+                            ul {
+                                for (x in user.sessions.values) {
+                                    li {
+
+                                        +"Date: ${x.date}| Ip: ${x.ip}"
+                                    }
+                                }
+
+                            }
+
 
                         }
 
@@ -299,9 +329,8 @@ fun Application.loginPage() {
 
 
                 }
-
-
             }
+
 
         }
 

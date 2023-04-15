@@ -1,22 +1,15 @@
 package me.alexirving.structs.user
 
-import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import me.alexirving.structs.Routine
+import kotlinx.serialization.Transient
+import me.alexirving.api.loadBoard
 
 @Serializable
 @SerialName("board")
 class Board(override val identifier: String, override var pwd: String) : User() {
-    @Contextual
-    val instance = BoardInstance()
-
-    class BoardInstance {
-        @Contextual
-        var god: Account? = null
-        var routine: Routine? = null
-
-    }
+    @Transient
+    val instance = BoardInstance(code = loadBoard(this))
 
 
 }

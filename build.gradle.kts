@@ -40,4 +40,6 @@ dependencies {
     implementation("io.ktor:ktor-server-sessions:$kotlinVersion")
     implementation("io.ktor:ktor-network-tls-certificates:$kotlinVersion")
     implementation("io.ktor:ktor-server-freemarker:$kotlinVersion")
+    implementation("io.ktor:ktor-server-websockets:$kotlinVersion")
+
 }
