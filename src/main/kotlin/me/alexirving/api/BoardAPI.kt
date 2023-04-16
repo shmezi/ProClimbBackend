@@ -30,15 +30,15 @@ fun Application.api() {
                     user.runCommand = ::sendCommand
                     for (frame in incoming) {
                         frame as? Frame.Text ?: continue
-                        when (frame.readText().uppercase().pq("$id(Server<-Board)")) {
+                        val raw: List<String> = frame.readText().uppercase().split(' ')
+                        val command = raw[0]
+                        when (command.pq("$id(Server<-Board)")) {
                             "CODE" -> {
                                 sendCommand("CODE ${user.code}")
                             }
-
                             "DISCONNECT" -> {
                                 sendCommand("CODE ${user.disconnect(board)}")
                             }
-
                             "SUCCESS" -> {
                                 val userId = user.routine?.identifier ?: return@webSocket
                                 users.update(userId)

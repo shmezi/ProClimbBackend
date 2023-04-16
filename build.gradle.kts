@@ -36,6 +36,7 @@ dependencies {
     implementation("io.ktor:ktor-server-auth-jvm:$ktorVersion")
     implementation("io.ktor:ktor-server-netty:$ktorVersion")
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
+    implementation("io.ktor:ktor-server-freemarker-jvm:2.2.3")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion")
     implementation("io.ktor:ktor-server-sessions:$kotlinVersion")
     implementation("io.ktor:ktor-network-tls-certificates:$kotlinVersion")

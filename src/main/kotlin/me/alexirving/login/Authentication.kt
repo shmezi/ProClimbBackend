@@ -1,8 +1,8 @@
 package me.alexirving.login
 
-import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
+import io.ktor.server.freemarker.*
 import io.ktor.server.html.*
 import io.ktor.server.plugins.*
 import io.ktor.server.request.*
@@ -12,7 +12,6 @@ import io.ktor.server.sessions.*
 import io.ktor.util.*
 import kotlinx.html.*
 import me.alexirving.api.validateUser
-import me.alexirving.lib.util.pq
 import me.alexirving.randomString
 import me.alexirving.structs.user.Account
 import me.alexirving.structs.user.Board
@@ -24,6 +23,25 @@ import kotlin.collections.set
 
 
 fun bakeCookie() = randomString(32)
+
+fun validPassword(username: String, password: String): Boolean {
+    return when {
+        password.length < 8 || username.length > 16 -> false
+        password == username -> false
+        else -> true
+    }
+}
+
+val regex = "^[a-zA-Z0-9 ]*\$\n".toRegex()
+
+fun validUsername(username: String): Boolean {
+    return when {
+        username.length < 3 || username.length > 16 -> false
+        !username.matches(regex) -> false
+        else -> true
+    }
+}
+
 fun Application.loginPage() {
     install(Authentication) {
         session<CookiePrincipal>("account") {
@@ -32,12 +50,11 @@ fun Application.loginPage() {
                 user?.isSession(session.cookie)?.apply {
                     if (user is Account)
                         return@validate user
-                }.pq("Was3?")
-                null.pq("Was14?")
+                }
+                null
             }
             challenge {
-                call.respond(HttpStatusCode.Forbidden, "Please login at /user/login")
-//                call.respondRedirect("/user/login")
+                call.respondRedirect("/user/login")
             }
         }
         session<CookiePrincipal>("board") {
@@ -50,7 +67,7 @@ fun Application.loginPage() {
                 null
             }
             challenge {
-                call.respond(HttpStatusCode.Forbidden, "Please login at /user/login")
+                call.respondRedirect("/user/login")
             }
         }
         basic("board-api") {
@@ -66,8 +83,6 @@ fun Application.loginPage() {
                 null
             }
         }
-
-
         session<BoardSessionPrinciple>("session") {
             validate { session ->
                 validateUser(session.code)
@@ -75,12 +90,6 @@ fun Application.loginPage() {
             challenge("/control/auth")
         }
     }
-
-
-
-
-
-
 
     install(Sessions) {
         cookie<CookiePrincipal>("user_session") {
@@ -99,7 +108,6 @@ fun Application.loginPage() {
 
 
     routing {
-
         route("/user") {
             route("login") {
                 get {
@@ -107,35 +115,8 @@ fun Application.loginPage() {
                         call.respondRedirect("/home")
                         return@get
                     }
-
-                    call.respondHtml {
-                        body {
-                            form(
-                                action = "/user/login",
-                                encType = FormEncType.applicationXWwwFormUrlEncoded,
-                                method = FormMethod.post
-                            ) {
-                                p {
-                                    +"Username:"
-                                    textInput(name = "username")
-
-                                }
-                                p {
-                                    +"Password:"
-                                    passwordInput(name = "password")
-                                }
-                                p {
-                                    submitInput { value = "Login" }
-                                }
-                                a {
-                                    href = "/user/signup"
-                                    +"Signup!"
-                                }
-                            }
-                        }
-                    }
+                    call.respond(FreeMarkerContent("/user/login.ftl", mapOf<String, String>()))
                 }
-
                 post {
                     val params = call.receiveParameters()
 
@@ -146,7 +127,6 @@ fun Application.loginPage() {
                         call.respond("You did not send a username and or a password. U fool :(")
                         return@post
                     }
-
 
                     val user = users.getIfInDb(username)
 
@@ -170,9 +150,9 @@ fun Application.loginPage() {
                         users.update(user.identifier)
 
                         call.sessions.set(CookiePrincipal(user.identifier, cookie))
-                        call.respond(HttpStatusCode.Accepted)
+                        call.respondRedirect("/user")
                     } else {
-                        call.respond("Incorrect password!")
+                        call.respondRedirect("/user/login")
 
                     }
 

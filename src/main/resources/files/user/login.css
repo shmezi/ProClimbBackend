@@ -1,0 +1,10 @@
+#login {
+    border-radius: 25px;
+    border: blue 20px;
+}
+#username{
+    display: block;
+}
+#password{
+    display: block;
+}

@@ -53,7 +53,6 @@ fun Application.controller() {
                 get {
                     call.respondHtml {
 
-
                         body {
                             p {
                                 +"Connected to board: ${call.principal<Board>()?.identifier}"
