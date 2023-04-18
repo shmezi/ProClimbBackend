@@ -2,6 +2,7 @@ package me.alexirving.api
 
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
+import io.ktor.server.freemarker.*
 import io.ktor.server.html.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -93,37 +94,8 @@ fun Application.controller() {
             authenticate("account") {
                 route("auth") {
                     get {
-                        call.respondHtml {
-                            body {
-                                form(
-                                    action = "/control/auth",
-                                    encType = FormEncType.applicationXWwwFormUrlEncoded,
-                                    method = FormMethod.post
-                                ) {
-                                    ul {
-                                        repeat(6) {
-                                            li {
-                                                textInput {
-                                                    maxLength = "1"
-                                                    minLength = "1"
-                                                    placeholder = "0"
-                                                    name = it.toString()
-                                                }
-                                            }
-                                        }
-
-                                    }
-                                    p {
-                                        submitInput { value = "Connect" }
-                                    }
-                                }
-
-
-                            }
-                        }
-
+                        call.respond(FreeMarkerContent("/controller/controller-auth.ftl", mapOf<String, String>()))
                     }
-
                     post {
                         val params = call.receiveParameters()
 
