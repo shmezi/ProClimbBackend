@@ -12,6 +12,7 @@ import io.ktor.server.sessions.*
 import io.ktor.util.*
 import kotlinx.html.*
 import me.alexirving.api.validateUser
+import me.alexirving.lib.util.pq
 import me.alexirving.randomString
 import me.alexirving.structs.user.Account
 import me.alexirving.structs.user.Board
@@ -72,7 +73,9 @@ fun Application.loginPage() {
         }
         basic("board-api") {
             validate { credentials ->
+                "DEBUG".pq()
                 users.getIfInDb(credentials.name)?.apply {
+                    this.pq()
                     if (this !is Board)
                         return@validate null
                     if (check(credentials.password)) {
@@ -84,8 +87,9 @@ fun Application.loginPage() {
             }
         }
         session<BoardSessionPrinciple>("session") {
+            this.pq()
             validate { session ->
-                validateUser(session.code)
+                validateUser(session.code.pq("code"))
             }
             challenge("/control/auth")
         }
@@ -115,6 +119,7 @@ fun Application.loginPage() {
                         call.respondRedirect("/home")
                         return@get
                     }
+                    "DEBUG".pq()
                     call.respond(FreeMarkerContent("/user/login.ftl", mapOf<String, String>()))
                 }
                 post {

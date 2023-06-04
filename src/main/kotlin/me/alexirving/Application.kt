@@ -5,9 +5,7 @@ import io.ktor.server.application.*
 import io.ktor.server.freemarker.*
 import io.ktor.server.netty.*
 import io.ktor.server.websocket.*
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import me.alexirving.api.api
 import me.alexirving.lib.database.manager.CachedDbManager
 import me.alexirving.lib.database.nosql.MongoConnection

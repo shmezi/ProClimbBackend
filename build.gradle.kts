@@ -2,10 +2,11 @@ val ktorVersion: String by project
 val kotlinVersion: String by project
 val logbackVersion: String by project
 
+application
 plugins {
     kotlin("jvm") version "1.8.10"
-    id("io.ktor.plugin") version "2.2.3"
     kotlin("plugin.serialization") version "1.8.10"
+    id("io.ktor.plugin") version "2.3.0"
 }
 
 group = "me.alexirving"
@@ -24,7 +25,7 @@ repositories {
 
 dependencies {
 
-    implementation("org.litote.kmongo:kmongo-coroutine-serialization:4.8.0")
+    implementation("org.litote.kmongo:kmongo-coroutine-serialization:4.9.0")
     implementation("org.springframework.security:spring-security-crypto:6.0.2")
     implementation("commons-logging:commons-logging:1.2")
     implementation("org.bouncycastle:bcpkix-jdk15on:1.70")

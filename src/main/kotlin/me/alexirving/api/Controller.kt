@@ -9,6 +9,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import kotlinx.html.*
+import me.alexirving.lib.util.pq
 import me.alexirving.login.BoardSessionPrinciple
 import me.alexirving.randomString
 import me.alexirving.routines
@@ -83,6 +84,7 @@ fun Application.controller() {
                         }
                     }
                 }
+                //POST [Board routine selection]
                 post {
                     val params = call.receiveParameters()
                     call.principal<Board>()?.instance?.setBoardRoutine(
@@ -92,6 +94,7 @@ fun Application.controller() {
                 }
             }
             authenticate("account") {
+                //POST [CODE] Login to session
                 route("auth") {
                     get {
                         call.respond(FreeMarkerContent("/controller/controller-auth.ftl", mapOf<String, String>()))
@@ -103,7 +106,7 @@ fun Application.controller() {
                         repeat(6) {
                             f.append(params[it.toString()])
                         }
-                        val finalizedCode = f.toString().uppercase()
+                        val finalizedCode = f.toString().uppercase().pq()
                         if (finalizedCode.length != 6) {
                             call.respond("Enter exactly the 6 digit code")
                             return@post

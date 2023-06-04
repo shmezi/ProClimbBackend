@@ -15,15 +15,18 @@ fun Application.configureRouting() {
 
         static("/") {
             resources("files")
+
         }
         authenticate("account", "board", strategy = AuthenticationStrategy.FirstSuccessful) {
             get("home") {
                 val user = call.principal<User>() ?: return@get
                 call.respond(FreeMarkerContent("index.ftl", mapOf( "user" to user)))
             }
-        }
-        get { call.respondRedirect("/home") }
+        get {
+            call.respondRedirect("/home")
 
+        }
+        }
 
     }
 }
