@@ -12,7 +12,8 @@ import kotlinx.html.*
 import me.alexirving.lib.util.pq
 import me.alexirving.login.BoardSessionPrinciple
 import me.alexirving.randomString
-import me.alexirving.routines
+import me.alexirving.routinesDb
+import me.alexirving.structs.Routine
 import me.alexirving.structs.user.Account
 import me.alexirving.structs.user.Board
 import kotlin.collections.set
@@ -23,6 +24,12 @@ private val boardCode = mutableMapOf<Board, String>()
 
 //Code: UserID
 private val inUse = mutableMapOf<String, Board>()
+
+
+/**
+ * Load a board into the available to connect list with a new code
+ * @param board to connect to
+ */
 fun loadBoard(board: Board): String {
     val code = randomString(6)
     codeBoard[code] = board
@@ -31,18 +38,31 @@ fun loadBoard(board: Board): String {
 
 }
 
+/**
+ * Connect user to a board.
+ * @param code The code to connect to
+ * @param user The user that will connect to the board.
+ */
 fun loginToBoard(code: String, user: Account?): Board? {
+    if (inUse.containsKey(code)) return null
     val board = codeBoard[code] ?: return null
     inUse[code] = board
-    codeBoard.remove(code)
     board.instance.connect(user)
     return board
 }
 
+/**
+ * Validate weather a user is using a board and return it
+ * @param code Code of the board
+ * @return The board from the code provided
+ */
 fun validateUser(code: String): Board? {
     return inUse[code]
 }
 
+/**
+ * Destroy a user's session.
+ */
 fun killUserSession(board: Board) = inUse.remove(boardCode[board])
 
 fun getCode(board: Board) = boardCode[board]
@@ -53,44 +73,72 @@ fun Application.controller() {
         route("control") {
             authenticate("session", "account", strategy = AuthenticationStrategy.Required) {
                 get {
-                    call.respondHtml {
 
+                    val routines = mutableListOf<Routine>()
+                    val user = call.principal<Account>()
+                    val board = call.principal<Board>()
+                    user?.routines?.forEach { routines.add(it.value) }
+                    board?.routines?.forEach { routines.add(it.value) }
+                    call.respondHtml {
+                        head {
+                            title { +"ProHangController" }
+                            link(rel = "stylesheet", href = "/static/styles/controller.css")
+
+                        }
                         body {
-                            p {
-                                +"Connected to board: ${call.principal<Board>()?.identifier}"
-                            }
-                            h3 {
-                                +"Select a routine:"
-                            }
+                            h1 { +"Select a routine:" }
+                            h3 { +"Connected to: ${board?.identifier}" }
                             form(
                                 action = "/control",
                                 encType = FormEncType.applicationXWwwFormUrlEncoded,
                                 method = FormMethod.post
                             ) {
-                                select {
+                                id = "form"
+                                input {
+                                    type = InputType.hidden
+                                    id = "routine"
                                     name = "routine"
-                                    option {
-                                        value = "default"
-                                        +"Normal"
-                                    }
-                                    option {
-                                        value = "fast"
-                                        +"Speed"
-                                    }
                                 }
-                                postButton { +"Select!" }
-                            }
 
+                                for (routine in routines) {
+                                    section(classes = "container") {
+
+                                        div(classes = "card") {
+                                            id = routine.identifier
+                                            onClick =
+                                                """document.getElementById('routine').value = '${routine.identifier}'; document.getElementById('form').submit();""".trimMargin()
+                                            div(classes = "image") {
+                                                img(src = routine.icon) {
+                                                    alt = ""
+                                                }
+
+
+                                            }
+                                            h2 { +routine.name }
+                                            p { +routine.description }
+
+
+                                        }
+
+                                    }
+
+                                }
+
+                            }
                         }
+
                     }
                 }
+
                 //POST [Board routine selection]
                 post {
                     val params = call.receiveParameters()
+                    params.pq()
                     call.principal<Board>()?.instance?.setBoardRoutine(
-                        routines.getIfInDb(params["routine"] ?: "default") ?: return@post
+                        routinesDb.getIfInDb(params["routine"] ?: "default") ?: return@post
                     )
                     call.respondRedirect("/control")
+
                 }
             }
             authenticate("account") {
@@ -108,7 +156,8 @@ fun Application.controller() {
                         }
                         val finalizedCode = f.toString().uppercase().pq()
                         if (finalizedCode.length != 6) {
-                            call.respond("Enter exactly the 6 digit code")
+                            call.respondRedirect("/control/auth?reason=length")
+//                            call.respond("Enter exactly the 6 digit code")
                             return@post
                         }
                         val board = loginToBoard(finalizedCode, call.principal<Account>())
@@ -117,7 +166,7 @@ fun Application.controller() {
                             board.instance.controller = call.principal<Account>()
                             call.respondRedirect("/control")
                         } else
-                            call.respond("Could not find the board with id of: $finalizedCode. Is it on?")
+                            call.respondRedirect("/control/auth?reason=notfound")
                     }
 
 

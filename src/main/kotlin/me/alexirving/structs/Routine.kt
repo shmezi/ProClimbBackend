@@ -6,6 +6,9 @@ import me.alexirving.lib.database.core.Cacheable
 @Serializable
 class Routine(
     override val identifier: String,
+    var name: String,
+    var icon: String,
+    var description: String,
     var hangTime: Int,
     var pauseTime: Int,
     var roundCount: Int,

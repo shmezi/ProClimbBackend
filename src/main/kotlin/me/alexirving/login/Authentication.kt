@@ -3,21 +3,18 @@ package me.alexirving.login
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.freemarker.*
-import io.ktor.server.html.*
 import io.ktor.server.plugins.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import io.ktor.util.*
-import kotlinx.html.*
 import me.alexirving.api.validateUser
 import me.alexirving.lib.util.pq
 import me.alexirving.randomString
 import me.alexirving.structs.user.Account
 import me.alexirving.structs.user.Board
-import me.alexirving.structs.user.User
-import me.alexirving.users
+import me.alexirving.usersDb
 import java.time.Instant
 import java.util.*
 import kotlin.collections.set
@@ -47,7 +44,7 @@ fun Application.loginPage() {
     install(Authentication) {
         session<CookiePrincipal>("account") {
             validate { session ->
-                val user = users.getIfInDb(session.id)
+                val user = usersDb.getIfInDb(session.id)
                 user?.isSession(session.cookie)?.apply {
                     if (user is Account)
                         return@validate user
@@ -60,7 +57,7 @@ fun Application.loginPage() {
         }
         session<CookiePrincipal>("board") {
             validate { session ->
-                val user = users.getIfInDb(session.id)
+                val user = usersDb.getIfInDb(session.id)
                 user?.isSession(session.cookie)?.apply {
                     if (user is Board)
                         return@validate user
@@ -74,7 +71,7 @@ fun Application.loginPage() {
         basic("board-api") {
             validate { credentials ->
                 "DEBUG".pq()
-                users.getIfInDb(credentials.name)?.apply {
+                usersDb.getIfInDb(credentials.name)?.apply {
                     this.pq()
                     if (this !is Board)
                         return@validate null
@@ -87,9 +84,8 @@ fun Application.loginPage() {
             }
         }
         session<BoardSessionPrinciple>("session") {
-            this.pq()
             validate { session ->
-                validateUser(session.code.pq("code"))
+                validateUser(session.code)
             }
             challenge("/control/auth")
         }
@@ -112,14 +108,19 @@ fun Application.loginPage() {
 
 
     routing {
+        route("/") {
+            get {
+                call.respondRedirect("/user")
+            }
+        }
         route("/user") {
             route("login") {
                 get {
                     if (call.sessions.get<CookiePrincipal>()?.cookie != null) {
-                        call.respondRedirect("/home")
+                        call.respondRedirect("/user")
                         return@get
                     }
-                    "DEBUG".pq()
+
                     call.respond(FreeMarkerContent("/user/login.ftl", mapOf<String, String>()))
                 }
                 post {
@@ -133,7 +134,7 @@ fun Application.loginPage() {
                         return@post
                     }
 
-                    val user = users.getIfInDb(username)
+                    val user = usersDb.getIfInDb(username)
 
                     if (user == null) {
                         call.respond("The username $username does not exist!")
@@ -143,16 +144,16 @@ fun Application.loginPage() {
                     if (user.check(password)) {
                         val cookie = bakeCookie()
                         if (user is Account)
-                            users.getIfInDb(user.identifier)?.addSession(
+                            usersDb.getIfInDb(user.identifier)?.addSession(
                                 cookie,
                                 SessionData(Date.from(Instant.now()).toString(), call.request.origin.remoteAddress)
                             )
                         else
-                            users.getIfInDb(user.identifier)?.singleSession(
+                            usersDb.getIfInDb(user.identifier)?.singleSession(
                                 cookie,
                                 SessionData(Date.from(Instant.now()).toString(), call.request.origin.remoteAddress)
                             )
-                        users.update(user.identifier)
+                        usersDb.update(user.identifier)
 
                         call.sessions.set(CookiePrincipal(user.identifier, cookie))
                         call.respondRedirect("/user")
@@ -166,102 +167,55 @@ fun Application.loginPage() {
             }
             get("/logout") {
                 val session = call.sessions.get<CookiePrincipal>() ?: return@get
-                users.getIfInDb(session.id)?.removeSession(session.cookie)
+                usersDb.getIfInDb(session.id)?.removeSession(session.cookie)
                 call.sessions.clear<CookiePrincipal>()
-                call.respondRedirect("/home")
+                call.respondRedirect("/user")
+            }
+            get("/logoutall") {
+                val session = call.sessions.get<CookiePrincipal>() ?: return@get
+                usersDb.getIfInDb(session.id)?.clearSessions()
+                call.sessions.clear<CookiePrincipal>()
+                call.respondRedirect("/user")
             }
 
             route("/signup") {
                 get {
-                    call.respondHtml {
-                        body {
-                            form(
-                                action = "/user/signup",
-                                encType = FormEncType.applicationXWwwFormUrlEncoded,
-                                method = FormMethod.post
-                            ) {
-                                p {
-                                    +"Username:"
-                                    textInput(name = "username")
-
-                                }
-                                p {
-                                    +"Password:"
-                                    passwordInput(name = "password1")
-
-                                }
-                                p {
-                                    +"Repeat password:"
-                                    passwordInput(name = "password2")
-                                }
-
-                                p {
-                                    submitInput { value = "Signup" }
-                                }
-                                select {
-                                    name = "type"
-                                    option {
-                                        value = "account"
-                                        +"Standard"
-                                    }
-                                    option {
-                                        value = "board"
-                                        +"Hangboard-owner"
-                                    }
-                                }
-                                a {
-                                    href = "/user/login"
-                                    +"Login instead."
-                                }
-                            }
-                        }
-                    }
-
+                    call.respond(FreeMarkerContent("/user/signup.ftl", mapOf<String, String>()))
                 }
                 post {
                     val params = call.receiveParameters()
-                    val passwordA = params["password1"]
-
-                    if (
-                        passwordA != params["password2"] || passwordA == null
-                    ) {
-                        call.respond("Passwords do not match!")
+                    val password = params["password"]
+                    if (password == null) {
+                        call.respond("No password provided!")
                         return@post
                     }
-
                     val username = params["username"]
                     if (username == null) {
                         call.respond("No username provided!")
                         return@post
                     }
-                    val type = params["type"]
-                    if (type == null) {
-                        call.respond("No type provided!")
-                        return@post
-                    }
-                    if (users.getIfInDb(username) != null) {
+
+                    val type = params["type"] ?: "account"
+
+                    if (usersDb.getIfInDb(username) != null) {
                         call.respond("Username already exists!")
                         return@post
 
                     } else {
-                        users.getOrCreate(
+                        val cookie = bakeCookie()
+                        usersDb.getOrCreate(
                             username,
                             type,
-                            mutableMapOf<String, Any>().apply { this["password"] = passwordA }) {
-                            setPassword(passwordA)
-                        }
-                        val cookie = bakeCookie()
-                        users.getOrCreate(
-                            username,
-                            "account",
-                            mutableMapOf<String, Any>().apply { this["password"] = passwordA }) {
+                            mutableMapOf<String, Any>().apply { this["password"] = password }) {
+                            setPassword(password)
                             addSession(
                                 cookie,
                                 SessionData(Date.from(Instant.now()).toString(), call.request.origin.remoteAddress)
                             )
                         }
+
                         call.sessions.set(CookiePrincipal(username, cookie))
-                        call.respondRedirect("/home")
+                        call.respondRedirect("/user")
                     }
 
                 }
@@ -271,46 +225,18 @@ fun Application.loginPage() {
             authenticate("board", "account", strategy = AuthenticationStrategy.FirstSuccessful) {
                 get {
 
-                    val user = users.getIfInDb(call.sessions.get<CookiePrincipal>()?.id ?: "Not found")
+                    val user = usersDb.getIfInDb(call.sessions.get<CookiePrincipal>()?.id ?: "Not found")
                     if (user == null) {
                         call.respond("User was not found!")
                         return@get
                     }
-                    call.respondHtml {
-                        body {
-                            h1 { +"Account info:" }
-                            p { +"Username: ${user.identifier}" }
-                            fun type(u: User): String {
-                                return when (u) {
-                                    is Account -> "Account"
-                                    is Board -> "Board"
-                                }
-                            }
-
-                            p { +"Account type: ${type(user)}" }
-                            a {
-                                href = "/user/logout"
-                                +"Sign out"
-
-                            }
-                            h2 {
-                                +"Logged in sessions:"
-                            }
-                            ul {
-                                for (x in user.sessions.values) {
-                                    li {
-
-                                        +"Date: ${x.date}| Ip: ${x.ip}"
-                                    }
-                                }
-
-                            }
-
-
-                        }
-
-
+                    val map = mutableMapOf<String, String>()
+                    map["username"] = user.identifier
+                    map["type"] = if (user is Board) "Board" else "Standard"
+                    if (user is Account) {
+                        map["sessions"] = user.logs.map { "${it.date}: ${it.routineId}" }.joinToString { "- \n" }
                     }
+                    call.respond(FreeMarkerContent("/user/profile.ftl", map))
 
 
                 }

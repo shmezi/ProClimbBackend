@@ -8,7 +8,7 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.runBlocking
 import me.alexirving.lib.util.pq
 import me.alexirving.structs.user.Board
-import me.alexirving.users
+import me.alexirving.usersDb
 
 
 fun Application.api() {
@@ -41,8 +41,8 @@ fun Application.api() {
                             }
                             "SUCCESS" -> {
                                 val userId = user.routine?.identifier ?: return@webSocket
-                                users.update(userId)
-                                user.controller?.log(userId, true)
+                                user.controller?.log(userId, true)?: throw NullPointerException("Could not find the controller!")
+                                usersDb.update(userId)
                             }
                         }
 
