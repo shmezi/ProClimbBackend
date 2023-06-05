@@ -55,19 +55,7 @@ fun Application.module() = runBlocking {
         staticFiles("/static", File("files"))
     }
 
-    usersDb = MongoDbCachedCollection("Users", User::class.java, connection).getManager { id, type, params ->
-        when (type) {
-            "account" -> Account(
-                id,
-                params["password"] as String? ?: throw NullPointerException("OOPS"),
-                mutableListOf()
-            )
 
-            "board" -> Board(id, params["password"] as String)
-            else -> throw Exception("Account type does not exist!")
-        }
-
-    }
     routinesDb = MongoDbCachedCollection("Routines", Routine::class.java, connection).getManager { id, _, _ ->
         Routine(id, id, "https://cdn-icons-png.flaticon.com/512/1455/1455318.png", "Default", 7, 3, 6, 180, 5)
     }
@@ -80,28 +68,45 @@ fun Application.module() = runBlocking {
     api()
 
     val default = routinesDb.getOrCreate("default") {
+        name = "Normal"
+        description = "A nice calm routine"
     }
-    val speed= routinesDb.getOrCreate("fast") {
+    val speed = routinesDb.getOrCreate("fast") {
+        name = "Fast"
+        description = "A super speedy workout!"
         this.hangTime = 2
         this.numberOfSets = 3
         this.pauseTime = 2
         this.restTime = 5
         this.roundCount = 2
     }
-    val balanced= routinesDb.getOrCreate("balanced") {
-        this.hangTime = 2
-        this.numberOfSets = 3
-        this.pauseTime = 2
-        this.restTime = 5
-        this.roundCount = 2
+    val balanced = routinesDb.getOrCreate("balanced") {
+        name = "Balanced"
+        description = "A balanced routine"
+        this.hangTime = 4
+        this.numberOfSets = 5
+        this.pauseTime = 4
+        this.restTime = 7
+        this.roundCount = 4
+    }
+    usersDb = MongoDbCachedCollection("Users", User::class.java, connection).getManager { id, type, params ->
+        when (type) {
+            "account" -> Account(
+                id,
+                params["password"] as String? ?: throw NullPointerException("No password found"),
+                mutableListOf()
+            )
+
+            "board" -> Board(id, params["password"] as String).apply {
+                routines["speed"] = speed
+                routines["balanced"] = balanced
+                routines["default"] = default
+            }
+
+            else -> throw NullPointerException("Cannot find user type")
+        }
+
     }
 
-    usersDb.getOrCreate("shmezi"){
-        routines["fast"] = speed
-        routines["default"] = default
-        routines["balanced"] = balanced
-
-
-    }
 
 }

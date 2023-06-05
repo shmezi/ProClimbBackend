@@ -235,6 +235,8 @@ fun Application.loginPage() {
                     map["type"] = if (user is Board) "Board" else "Standard"
                     if (user is Account) {
                         map["sessions"] = user.logs.map { "${it.date}: ${it.routineId}" }.joinToString { "- \n" }
+                    }else{
+                        map["sessions"] = ""
                     }
                     call.respond(FreeMarkerContent("/user/profile.ftl", map))
 
