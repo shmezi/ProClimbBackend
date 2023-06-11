@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ProHang | Profile</title>
+    <title>ProHang |  Board-Profile</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"/>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap');
@@ -258,17 +258,12 @@
 
     <div class="social-share">
         <div class="row">
-            <span><a href="/user/logout">Signout</a></span>
+            <span><a href="/user/logout">Sign-out</a></span>
         </div>
         <div class="row">
-            <span> <a href="/control">Controller</a></span>
+            <span>  <a href="/user/logoutall">Sign-out all</a></span>
+
         </div>
-        <div class="row">
-            <span> <a href="/user/logs">Logs</a></span>
-        </div>
-<#--        <div class="row">-->
-<#--            <span>  <a href="/user/logoutall">Signout all</a></span>-->
-<#--        </div>-->
     </div>
 </div>
 </body>

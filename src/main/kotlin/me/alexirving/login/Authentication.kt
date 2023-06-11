@@ -3,15 +3,19 @@ package me.alexirving.login
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.freemarker.*
+import io.ktor.server.html.*
 import io.ktor.server.plugins.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import io.ktor.util.*
+import kotlinx.coroutines.runBlocking
+import kotlinx.html.*
 import me.alexirving.api.validateUser
-import me.alexirving.lib.util.pq
 import me.alexirving.randomString
+import me.alexirving.routinesDb
+import me.alexirving.structs.UserLog
 import me.alexirving.structs.user.Account
 import me.alexirving.structs.user.Board
 import me.alexirving.usersDb
@@ -70,9 +74,7 @@ fun Application.loginPage() {
         }
         basic("board-api") {
             validate { credentials ->
-                "DEBUG".pq()
-                usersDb.getIfInDb(credentials.name)?.apply {
-                    this.pq()
+                usersDb.getIfInDb(credentials.name.lowercase())?.apply {
                     if (this !is Board)
                         return@validate null
                     if (check(credentials.password)) {
@@ -126,7 +128,7 @@ fun Application.loginPage() {
                 post {
                     val params = call.receiveParameters()
 
-                    val username = params["username"]
+                    val username = params["username"]?.lowercase()
                     val password = params["password"]
 
                     if (username == null || password == null) {
@@ -178,6 +180,44 @@ fun Application.loginPage() {
                 call.respondRedirect("/user")
             }
 
+            authenticate("account") {
+                get("/logs") {
+                    call.respondHtml {
+                        head {
+                            title { +"ProHang | Logs" }
+                            link(rel = "stylesheet", href = "/static/styles/logs.css")
+                        }
+                        body {
+                            val user = call.principal<Account>()
+                            h1{+"User logs:"}
+                            for (log in user?.logs ?: listOf()) {
+                                runBlocking {
+                                    val routine = routinesDb.getIfInDb(log.routineId) ?: return@runBlocking
+                                    section(classes = "container") {
+                                        div(classes = "card") {
+                                            div(classes = "image") {
+                                                img(src = routine.icon) {
+                                                    alt = ""
+                                                }
+
+
+                                            }
+                                            h2 { +"Routine: ${routine.name}" }
+                                            p { +"${log.date}: - ${if(log.success) "Success!" else "Failed :("}" }
+
+
+                                        }
+
+                                    }
+                                }
+
+
+                            }
+                        }
+
+                    }
+                }
+            }
             route("/signup") {
                 get {
                     call.respond(FreeMarkerContent("/user/signup.ftl", mapOf<String, String>()))
@@ -189,7 +229,7 @@ fun Application.loginPage() {
                         call.respond("No password provided!")
                         return@post
                     }
-                    val username = params["username"]
+                    val username = params["username"]?.lowercase()
                     if (username == null) {
                         call.respond("No username provided!")
                         return@post
@@ -224,7 +264,6 @@ fun Application.loginPage() {
             }
             authenticate("board", "account", strategy = AuthenticationStrategy.FirstSuccessful) {
                 get {
-
                     val user = usersDb.getIfInDb(call.sessions.get<CookiePrincipal>()?.id ?: "Not found")
                     if (user == null) {
                         call.respond("User was not found!")
@@ -234,11 +273,10 @@ fun Application.loginPage() {
                     map["username"] = user.identifier
                     map["type"] = if (user is Board) "Board" else "Standard"
                     if (user is Account) {
-                        map["sessions"] = user.logs.map { "${it.date}: ${it.routineId}" }.joinToString { "- \n" }
-                    }else{
-                        map["sessions"] = ""
+                        call.respond(FreeMarkerContent("/user/profile.ftl", map))
+                    } else {
+                        call.respond(FreeMarkerContent("/user/board-profile.ftl", map))
                     }
-                    call.respond(FreeMarkerContent("/user/profile.ftl", map))
 
 
                 }

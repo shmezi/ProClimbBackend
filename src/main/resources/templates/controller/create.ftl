@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProHang | Sign-up</title>
+    <title>ProHang | Routine Creation</title>
     <style>
         @import url('https://fonts.googleapis.com/css?family=Poppins:400,500,600,700&display=swap');
 
@@ -120,28 +120,54 @@
     </style>
 </head>
 <body>
+<#--
+var name: String,
+    var icon: String,
+    var description: String,
+    var hangTime: Int,
+    var pauseTime: Int,
+    var roundCount: Int,
+    var restTime: Int,
+    var numberOfSets: Int-->
 <div class="wrapper">
     <h2>Registration</h2>
-    <form action="/user/signup" enctype="application/x-www-form-urlencoded" method="post">
+    <form action="/create" enctype="application/x-www-form-urlencoded" method="post">
         <div class="input-box">
-            <input type="text" placeholder="Username" required name="username">
+            <input type="text" placeholder="Routine name" required name="routine">
         </div>
         <div class="input-box">
-            <input type="password" placeholder="Password" required name="password">
+            <input type="text" placeholder="Routine icon" required name="icon">
         </div>
         <div class="input-box">
-            <input type="password" placeholder="Confirm password" required>
+            <input type="text" placeholder="Routine description" required name="description">
         </div>
-        <div class="policy">
-            <input id="select" type="checkbox" name="type" value="board">
-            <label for="select">  I am a board owner!</label>
 
+        <div class="input-box">
+            <input type="number" placeholder="Routine hangTime" required name="hangTime">
         </div>
+
+
+        <div class="input-box">
+            <input type="number" placeholder="Routine pauseTime" required name="pauseTime">
+        </div>
+
+        <div class="input-box">
+            <input type="number" placeholder="roundCount" required name="roundCount">
+        </div>
+
+        <div class="input-box">
+            <input type="number" placeholder="restTime" required name="restTime">
+        </div>
+        <div class="input-box">
+            <input type="number" placeholder="Routine numberOfSets" required name="numberOfSets">
+        </div>
+
+
         <div class="input-box button">
-            <input type="Submit" value="Register Now">
+            <input type="Submit" value="Create">
         </div>
         <div class="text">
-            <h3>Already have an account? <a href="/user/login">Login now</a></h3>
+            <h3><a href="/control">Back to controller</a></h3>
         </div>
     </form>
 </div>

@@ -5,7 +5,7 @@
     <meta name="viewport"
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Controller-Auth</title>
+    <title>ProHang | Controller-Auth</title>
     <style>
         @import url("https://fonts.googleapis.com/css2?family=Inter&display=swap");
 
@@ -14,6 +14,7 @@
             margin: 0;
             box-sizing: border-box;
             font-family: Inter;
+
         }
 
         body {
@@ -65,6 +66,7 @@
             height: 70px;
             border-radius: 4px;
             outline: 2px solid rgb(66, 66, 66);
+            text-transform: uppercase;
         }
 
         #otp-form input:focus-visible {
@@ -113,7 +115,7 @@
         </form>
         <input type="button" id="verify-btn" name="Login" value="Login">
     </div>
-<div><a href="/user">Back to profile.</a></div>
+    <div><a href="/user">Back to profile.</a></div>
 </section>
 </body>
 <script>

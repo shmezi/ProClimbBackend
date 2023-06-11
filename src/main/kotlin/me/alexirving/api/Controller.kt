@@ -11,11 +11,13 @@ import io.ktor.server.sessions.*
 import kotlinx.html.*
 import me.alexirving.lib.util.pq
 import me.alexirving.login.BoardSessionPrinciple
+import me.alexirving.login.CookiePrincipal
 import me.alexirving.randomString
 import me.alexirving.routinesDb
 import me.alexirving.structs.Routine
 import me.alexirving.structs.user.Account
 import me.alexirving.structs.user.Board
+import me.alexirving.usersDb
 import kotlin.collections.set
 
 //Code: Board  | Board: Code
@@ -70,6 +72,33 @@ fun getCode(board: Board) = boardCode[board]
 
 fun Application.controller() {
     routing {
+        route("create") {
+            authenticate("board", "account", strategy = AuthenticationStrategy.FirstSuccessful) {
+                post {
+                    val user = usersDb.getIfInDb(call.sessions.get<CookiePrincipal>()?.id ?: "Not found")
+                    val p = call.parameters
+                    user?.routines?.set(
+                        p["routine"].toString(),
+                        Routine(
+                            p["routine"].toString(),
+                            p["routine"].toString(),
+                            p["icon"].toString(),
+                            p["description"].toString(),
+                            p["hangTime"]?.toInt() ?: 0,
+                            p["pauseTime"]?.toInt() ?: 0,
+                            p["roundCount"]?.toInt() ?: 0,
+                            p["restTime"]?.toInt() ?: 0,
+                            p["numberOfSets"]?.toInt() ?: 0
+                        )
+                    )
+                    usersDb.update(user?.identifier ?: return@post)
+                }
+
+                get {
+                    call.respond(FreeMarkerContent("/controller/create.ftl", mapOf<String, String>()))
+                }
+            }
+        }
         route("control") {
             authenticate("session", "account", strategy = AuthenticationStrategy.Required) {
                 get {
@@ -81,7 +110,7 @@ fun Application.controller() {
                     board?.routines?.forEach { routines.add(it.value) }
                     call.respondHtml {
                         head {
-                            title { +"ProHangController" }
+                            title { +"ProHang | Controller" }
                             link(rel = "stylesheet", href = "/static/styles/controller.css")
 
                         }

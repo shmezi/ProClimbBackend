@@ -57,7 +57,7 @@ fun Application.module() = runBlocking {
 
 
     routinesDb = MongoDbCachedCollection("Routines", Routine::class.java, connection).getManager { id, _, _ ->
-        Routine(id, id, "https://cdn-icons-png.flaticon.com/512/1455/1455318.png", "Default", 7, 3, 6, 180, 5)
+        Routine(id, id, "https://cdn-icons-png.flaticon.com/512/5500/5500903.png", "Default", 7, 3, 6, 180, 5)
     }
     install(WebSockets)
     install(FreeMarker) {
@@ -70,10 +70,12 @@ fun Application.module() = runBlocking {
     val default = routinesDb.getOrCreate("default") {
         name = "Normal"
         description = "A nice calm routine"
+        icon = "https://cdn-icons-png.flaticon.com/512/6643/6643177.png"
     }
     val speed = routinesDb.getOrCreate("fast") {
         name = "Fast"
         description = "A super speedy workout!"
+        icon = "https://cdn-icons-png.flaticon.com/512/1455/1455318.png"
         this.hangTime = 2
         this.numberOfSets = 3
         this.pauseTime = 2
@@ -83,6 +85,7 @@ fun Application.module() = runBlocking {
     val balanced = routinesDb.getOrCreate("balanced") {
         name = "Balanced"
         description = "A balanced routine"
+        icon = "https://cdn-icons-png.flaticon.com/512/2994/2994536.png"
         this.hangTime = 4
         this.numberOfSets = 5
         this.pauseTime = 4
@@ -107,6 +110,7 @@ fun Application.module() = runBlocking {
         }
 
     }
+
 
 
 }
