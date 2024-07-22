@@ -100,18 +100,11 @@
         <h1 class="title">Enter board's OTP</h1>
         <form action="/control/auth" id="otp-form" enctype="application/x-www-form-urlencoded" method="post">
             <label for="0"></label><input type="text" name="0" class="otp-input" id="0" maxlength="1" minlength="1">
-
             <label for="1"></label><input type="text" name="1" class="otp-input" id="1" maxlength="1" minlength="1">
-
             <label for="2"></label><input type="text" name="2" class="otp-input" id="2" maxlength="1" minlength="1">
-
             <label for="3"></label><input type="text" name="3" class="otp-input" id="3" maxlength="1" minlength="1">
-
             <label for="4"></label><input type="text" name="4" class="otp-input" id="4" maxlength="1" minlength="1">
-
             <label for="5"></label><input type="text" name="5" class="otp-input" id="5" maxlength="1" minlength="1">
-
-
         </form>
         <input type="button" id="verify-btn" name="Login" value="Login">
     </div>

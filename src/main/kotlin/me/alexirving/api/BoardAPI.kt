@@ -48,7 +48,6 @@ fun Application.api() {
 
                     }
 
-//                    close()
                 }
 
             }

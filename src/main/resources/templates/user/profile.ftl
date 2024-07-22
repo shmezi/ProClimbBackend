@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- Created By CodingNepal - www.codingnepalweb.com -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -250,12 +249,6 @@
 
     <div class="name">${username}</div>
     <div class="about">Account type: ${type}</div>
-
-    <#--    <div class="buttons">-->
-    <#--        <button>Message</button>-->
-    <#--        <button>Subscribe</button>-->
-    <#--    </div>-->
-
     <div class="social-share">
         <div class="row">
             <span><a href="/user/logout">Signout</a></span>
@@ -266,9 +259,7 @@
         <div class="row">
             <span> <a href="/user/logs">Logs</a></span>
         </div>
-<#--        <div class="row">-->
-<#--            <span>  <a href="/user/logoutall">Signout all</a></span>-->
-<#--        </div>-->
+
     </div>
 </div>
 </body>

@@ -1,0 +1,22 @@
+{
+  "_id": {
+    "$oid": "669d56d1c809d5cedb7851aa"
+  },
+  "___type": "account",
+  "sessions": {
+    "7N5PY2JDJJ18OAUYPIZYWAW8PF3C3LV6": {
+      "date": "Sun Jul 21 21:26:12 IDT 2024",
+      "ip": "0:0:0:0:0:0:0:1"
+    }
+  },
+  "routines": {},
+  "identifier": "shmezi",
+  "pwd": "$argon2id$v=19$m=16384,t=2,p=1$q3vt1zxElbSIBTqrWGdKjw$Rsk09Fg8rIUJ/y8hCtRiNl8DU6VxpuDZco6qXAD82Fo",
+  "logs": [
+    {
+      "routineId": "fast",
+      "date": "Sun Jul 21 21:28:49 IDT 2024",
+      "success": true
+    }
+  ]
+}

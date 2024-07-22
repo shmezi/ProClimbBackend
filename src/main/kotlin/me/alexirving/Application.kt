@@ -9,7 +9,7 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import kotlinx.coroutines.runBlocking
 import me.alexirving.api.api
-import me.alexirving.api.controller
+import me.alexirving.api.configureController
 import me.alexirving.lib.database.manager.CachedDbManager
 import me.alexirving.lib.database.nosql.MongoConnection
 import me.alexirving.lib.database.nosql.MongoDbCachedCollection
@@ -55,17 +55,17 @@ fun Application.module() = runBlocking {
         staticFiles("/static", File("files"))
     }
 
-
-    routinesDb = MongoDbCachedCollection("Routines", Routine::class.java, connection).getManager { id, _, _ ->
-        Routine(id, id, "https://cdn-icons-png.flaticon.com/512/5500/5500903.png", "Default", 7, 3, 6, 180, 5)
-    }
     install(WebSockets)
     install(FreeMarker) {
         templateLoader = ClassTemplateLoader(this::class.java.classLoader, "templates")
     }
     loginPage()
-    controller()
+    configureController()
     api()
+
+    routinesDb = MongoDbCachedCollection("Routines", Routine::class.java, connection).getManager { id, _, _ ->
+        Routine(id, id, "https://cdn-icons-png.flaticon.com/512/5500/5500903.png", "Default", 7, 3, 6, 180, 5)
+    }
 
     val default = routinesDb.getOrCreate("default") {
         name = "Normal"
